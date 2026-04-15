@@ -468,6 +468,100 @@ function toast(msg,err){
 }
 
 document.addEventListener("DOMContentLoaded",function(){ document.getElementById("h-date").value=today(); });
-<\/script>
+</script>
+
+<script>
+// 1. Tab Switching Logic
+const tabs = document.querySelectorAll('.tab');
+const contents = document.querySelectorAll('.tab-content');
+
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        contents.forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+});
+
+// 2. Real-time Preview Sync
+// This function grabs data from your inputs and puts it in the A4 sheet
+function updatePreview() {
+    // Example: Syncing a Title
+    const reportTitle = document.querySelector('input[placeholder="e.g. Monthly Security Overview"]')?.value;
+    const previewTitle = document.querySelector('.rp-main-title');
+    if (previewTitle && reportTitle) previewTitle.innerText = reportTitle;
+
+    // Example: Syncing Meta Data (Site Name)
+    const siteName = document.querySelector('input[placeholder="e.g. Lagos Corporate Office"]')?.value;
+    const previewSite = document.querySelectorAll('.rp-meta-item .rp-meta-key + span')[0]; // Adjust index based on HTML
+    if (previewSite && siteName) previewSite.innerText = siteName;
+}
+
+// Attach listeners to all inputs for the "Live" feel
+document.querySelectorAll('.form-input, .form-textarea').forEach(input => {
+    input.addEventListener('input', updatePreview);
+});
+
+// 3. Image Upload & Preview Handling
+const uploadZone = document.querySelector('.upload-zone');
+// Create a hidden file input
+const hiddenInput = document.createElement('input');
+hiddenInput.type = 'file';
+hiddenInput.accept = 'image/*';
+
+uploadZone.addEventListener('click', () => hiddenInput.click());
+
+hiddenInput.addEventListener('change', function() {
+    const file = this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Update the preview image in the A4 section
+            const reportImg = document.querySelector('.rp-img');
+            if (reportImg) {
+                reportImg.src = e.target.result;
+                showToast("Image uploaded successfully!");
+            }
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
+// 4. Export to PDF Function
+async function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const element = document.querySelector('.a4-page');
+    const overlay = document.getElementById('overlay');
+    
+    overlay.classList.add('on');
+    
+    try {
+        const canvas = await html2canvas(element, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save("Halogen-Security-Report.pdf");
+        showToast("PDF Downloaded!");
+    } catch (error) {
+        showToast("Error generating PDF", true);
+    } finally {
+        overlay.classList.remove('on');
+    }
+}
+
+// Toast helper
+function showToast(msg, isErr = false) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.className = isErr ? 'toast on err' : 'toast on';
+    setTimeout(() => t.classList.remove('on'), 3000);
+}
+</script>
+
 </body>
 </html>
